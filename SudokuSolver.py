@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+import sys
+
 class Sudoku:
     def __init__(self, board):
         self.board = board
@@ -60,23 +62,13 @@ class Sudoku:
         yield True
 
 def main():
-    # example board, 4 possible Solutions
-    board = [[0, 7, 6, 0, 1, 3, 0, 0, 0],
-             [0, 4, 0, 0, 0, 0, 0, 0, 0],
-             [0, 0, 8, 6, 9, 0, 7, 0, 0],
-             [0, 5, 0, 0, 6, 9, 0, 3, 0],
-             [0, 0, 0, 0, 0, 0, 5, 4, 0],
-             [0, 8, 0, 7, 3, 0, 0, 0, 0],
-             [5, 1, 0, 0, 2, 6, 8, 0, 0],
-             [0, 0, 7, 1, 0, 0, 9, 0, 0],
-             [0, 0, 0, 0, 4, 0, 0, 6, 0]]
+    board = [[int(x) for x in line.replace('.', '0')] for line in sys.stdin.read().rstrip().split("\n")]
 
     sudoku = Sudoku(board)
     print("Difficulty: " + sudoku.evaluate())
 
-    # needed for multiple solutions
     counter = 0
-    for solutions in sudoku.solve():
+    for _solutions in sudoku.solve():
         print()
         sudoku.print()
         counter += 1
