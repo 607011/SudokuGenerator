@@ -1,21 +1,29 @@
 #!/usr/bin/env python3
 
-import random
 import sys
 import time
+from datetime import datetime
+import numpy as np
+from numpy.random import MT19937, SeedSequence
 
 class Sudoku:
     def __init__(self):
-        self.reset()
+        self.board = np.zeros((9, 9), dtype=np.int8)
+        self.rng = MT19937(SeedSequence(int(1e3*time.time())))
+        # warmup RNG
+        for _ in range(1000):
+            self.rng.random_raw()
 
     def reset(self):
-        # create empty 9x9 board
-        rows = 9
-        columns = 9
-        self.board = [[0 for j in range(columns)] for i in range(rows)]
+        self.board.fill(0)
 
+    def to_text(self) -> str:
+        result = ''
+        for row in self.board:
+            result += ''.join([str(x) for x in row]) + '\n'
+        return result
 
-    def toSVG(self):
+    def to_svg(self) -> str:
         # Variables
         cell_size = 40
         line_color = "black"
@@ -42,89 +50,59 @@ class Sudoku:
                                     style="font-size:20; text-anchor:middle; dominant-baseline:middle"> {str(self.board[row][column])} </text>'
 
         svg += '</svg>'
-        with open('sudoku.svg', 'w') as f:
-            f.write(svg)
+        return svg
 
 
-    def generate(self, difficulty, delay):
-        # fill diagonal squares
-        for i in range(0, 9, 3):
-            square = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-            random.shuffle(square)
-            for r in range(3):
-                for c in range(3):
-                    self.board[r + i][c + i] = square.pop()
+    def generate(self, difficulty, timeout=None):
+        n_tries = 0
+        while True:
+            if timeout:
+                if time.time() > timeout:
+                    break 
+            n_tries += 1
+            print(f'\r{n_tries} ... ', end='', flush=True)
+            n = 81 - self.min_empty_cells_for_difficulty(difficulty)
+            while n > 0:
+                row = self.rng.random_raw() % 9
+                col = self.rng.random_raw() % 9
+                num = 1 + self.rng.random_raw() % 9
+                if self.number_is_valid(row, col, num):
+                    self.board[row][col] = num
+                    n -= 1
+            #print()
+            #self.print()
+            solutions = [solution for solution in self.solve()]
+            print(f'{len(solutions)}', end='', flush=True)
+            if len(solutions) == 1:
+                print()
+                return True
+            self.reset()
+            # return False
 
-        # fill rest
-        for solutions in self.solve():
-            break
+        print("\rNo Sudoku found.", file=sys.stderr)
+        return False
 
-        # difficulty
-        empty_cells = self.evaluate(difficulty)
-
-        # remove numbers
-        while(empty_cells > 0):
-            r, c = random.randint(0, 8), random.randint(0, 8)
-            if self.board[r][c] == 0:
-                continue
-            else:
-                # saving a copy of the number, just in case, if we cant remove it
-                copy = self.board[r][c]
-                self.board[r][c] = 0
-
-                # checking how many solutions are in the board
-                solutions = [solution for solution in self.solve()]
-
-                # if there is more than one solution, we put the number back
-                if len(solutions) > 1:
-                    self.board[r][c] = copy
-                else:
-                    empty_cells -= 1
-
-            if delay <= time.time():
-                print("No Sudoku found. Trying again.")
-                return False
-
-        return True
-
-
-    def evaluate(self, difficulty):
-        # 1 = really easy, 3 = middle, 6 = devilish (lowest number possible, takes a long time to calculate)
-        if difficulty == 1:
-            return 25
-        elif difficulty == 2:
-            return 35
-        elif difficulty == 3:
-            return 45
-        elif difficulty == 4:
-            return 52
-        elif difficulty == 5:
-            return 58
-        elif difficulty == 6:
-            return 64
-        else:
+    # 1 = really easy, 3 = middle, 6 = devilish (lowest number possible, takes a long time to calculate)
+    def min_empty_cells_for_difficulty(self, difficulty):
+        empty_cells = [0, 25, 35, 45, 52, 58, 64]
+        if difficulty < 1 or difficulty > len(empty_cells)-1:
             print("invalid difficulty", file=sys.stderr)
+        return empty_cells[difficulty]
 
 
     # method to print the board in console
     def print(self):
         for i in range(9):
-            print(" ".join([str(x)if x != 0 else "." for x in self.board[i]]))
+            print("".join([str(x) if x != 0 else "." for x in self.board[i]]))
 
 
     def number_is_valid(self, row, column, number):
-        # check row and column
-        for i in range(9):
-            if self.board[row][i] == number or self.board[i][column] == number:
-                return False
-
-        # check square
-        start_column = column // 3 * 3
-        start_row = row // 3 * 3
-        for i in range(3):
-            for j in range(3):
-                if self.board[i + start_row][j + start_column] == number:
-                    return False
+        r = row - row % 3
+        c = column - column % 3
+        if np.any(self.board[:,column] == number) or \
+            np.any(self.board[row,:] == number) or \
+                np.any(self.board[r:r+3, c:c+3] == number):
+            return False
         return True
 
 
@@ -149,25 +127,17 @@ def main():
     # takes difficulty as an argument, if not provided the program removes half of the board (level 3)
     args = [int(x) if x.isdecimal() else x for x in sys.argv[1:]]
     difficulty = args[0] if len(args) > 0 else 3
-
     sudoku = Sudoku()
+    ok = sudoku.generate(difficulty, timeout=None)
+    if ok:
+        print()
+        sudoku.print()
+        now = datetime.now()
+        with open(f'sudoku-{now:%Y%m%dT%H%M%S}-{difficulty}.svg', 'w') as f:
+            f.write(sudoku.to_svg())
+        with open(f'sudoku-{now:%Y%m%dT%H%M%S}-{difficulty}.txt', 'w') as f:
+            f.write(sudoku.to_text())
 
-    # trying in Total for 10 mins to find a sudoku
-    timeout = 600
-    start_time = time.time()
-    end_time = start_time + timeout
-
-    while time.time() < end_time:
-        # if generate() cant find a Sudoku in 20s, it tries again
-        delay = time.time() + 20
-        if sudoku.generate(difficulty, delay) == True:
-            break
-        else:
-            sudoku.reset()
-
-    # printing
-    sudoku.toSVG()
-    sudoku.print()
 
 
 if __name__ == "__main__":
