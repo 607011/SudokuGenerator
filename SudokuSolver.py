@@ -63,6 +63,8 @@ class Sudoku:
 
 def main():
     board = [[int(x) for x in line.replace('.', '0')] for line in sys.stdin.read().rstrip().split("\n")]
+    if len(board) == 1:
+        board = [board[0][i:i+9] for i in range(0, 81, 9)]
 
     sudoku = Sudoku(board)
     print("Difficulty: " + sudoku.evaluate())
