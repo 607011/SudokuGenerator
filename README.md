@@ -1,15 +1,17 @@
-# SudokuGenerator
+# Sudoku Generator & Solver
 
 There are two files:
-  * SudokuSolver.py is just a Solver, that finds all possible Solutions to a given Sudoku
-  * SudokuGenerator.py generates Sudoku's with different difficulty levels (1 to 6). You can pass the difficulty level as an argument. For example:
+
+  * SudokuSolver.py is a solver that finds all possible solutions to a given Sudoku.
+  * SudokuGenerator.py generates Sudokus with different difficulty levels (1 to 6). You can pass the difficulty level as an argument. For example:
+
   ```
   python3 SudokuGenerator.py 4
   ```
   
 ## Copyright
 
-Copyright ©️ 2023 Wilhelm Drehling, Heise Medien GmbH & Co. KG
+Copyright ©️ 2023 Wilhelm Drehling, Oliver Lau, Heise Medien GmbH & Co. KG
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
